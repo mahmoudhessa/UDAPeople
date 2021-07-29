@@ -123,11 +123,11 @@ jobs:
       # Restore from cache
       - restore_cache:
           keys: [frontend-build]
-      - run:
-          name: Analyze frontend.
-          command: |
-            cd frontend
-            npm audit --audit-level=critical --force
+      # - run:
+      #     name: Analyze frontend.
+      #     command: |
+      #       cd frontend
+      #       npm audit --audit-level=critical --force
       - save_cache:
           paths: [frontend/node_modules]
           key: frontend-build
