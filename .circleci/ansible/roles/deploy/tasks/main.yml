@@ -1,24 +1,22 @@
----
-- name: "Move backend files to server."
-  copy:
-    src: /root/project/backend_artifact.tar.gz
-    dest: ~/home/ubuntu
-
-- name: "install package dependencies"
+- name: "build package"
   shell: |
-    cd ~/home/ubuntu
-    tar -xzvf backend_artifact.tar.gz -C backend
-    rm backend_artifact.tar.gz
-    cd backend/
-    # npm install && npm run build
-    npm audit fix && npm run build
-    cd dist
-    echo `pwd` >> ansible-test.txt
-    pm2 start npm --name backend -- start
+    cd /home/ubuntu/backend
+    npm run build
 
-# - name: Executing node
-#   become: true
-#   shell: |
-#     cd ~/home/ubuntu/home/ubuntu/backend/dist
-#     echo "EXECUTED PM2" >> ansible-test.txt
-#     pm2 start npm --name backend -- start
+- name: "run migrations and save status to https://memstash.io/"
+  shell: |
+    cd /home/ubuntu/backend
+    npm run migrations > migrations.txt
+    cat migrations.txt
+    export CIRCLE_WORKFLOW_ID="{{ CIRCLE_WORKFLOW_ID }}"
+    echo CIRCLE_WORKFLOW_ID=${CIRCLE_WORKFLOW_ID}
+    curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data $( grep -c "No migrations are pending" migrations.txt ) https://api.memstash.io/values/migration_status
+  register: migration_output
+
+- debug:
+    msg: "{{ migration_output.stdout_lines }}"
+
+- name: "use pm2 to run the node server"
+  shell: |
+    cd /home/ubuntu/backend
+    pm2 start npm -- run "start:dev"
